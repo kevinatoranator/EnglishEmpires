@@ -2,17 +2,48 @@ console.log("Testing connection");
 
 var startButton;
 var mouseX, mouseY;
+var player;
+var gameStart = false;
 
-function startGame(){
+function loadGame(){
 	gameScreen.start();
 	startButton = new component(90, 30, "blue", 300, 120);
-	gameScreen.canvas.addEventListener('mousemove', (event) =>{
-		const mousePos = getMousePos(gameScreen, event);
+	startButton.update = function(){
+		if(this.inside){
+			color = "green";
+		}else{
+			color = "blue";
+		}
+		ctx = gameScreen.context;
+		ctx.fillStyle = color;
+		ctx.fillRect(this.x, this.y, this.width, this.height);
+	}
+	gameScreen.canvas.addEventListener('mousemove', MouseMoveStart);
+	gameScreen.canvas.addEventListener('click', MouseClickStart);
+}
+
+function MouseMoveStart(event){
+	const mousePos = getMousePos(gameScreen, event);
+	mouseX = mousePos.x;
+	mouseY = mousePos.y;
+	startButton.inside = isInside(mouseX, mouseY, startButton.x, startButton.y, startButton.width, startButton.height);
+	
+}
+function MouseClickStart(event){
+	const mousePos = getMousePos(gameScreen, event);
 		mouseX = mousePos.x;
 		mouseY = mousePos.y;
-		startButton.inside = isInside(mouseX, mouseY, startButton.x, startButton.y, startButton.width, startButton.height);
-		console.log(startButton.inside);
-	});
+		if(isInside(mouseX, mouseY, startButton.x, startButton.y, startButton.width, startButton.height)){
+			startGame();
+		}
+}
+
+function startGame(){
+	gameStart = true;
+	gameScreen.canvas.removeEventListener("mousemove", MouseMoveStart);
+	gameScreen.canvas.removeEventListener("click", MouseClickStart);
+	startButton = {};
+	player = new component(10, 10, "red", 30, 30);
 }
 
 function getMousePos(canvas, event){
@@ -28,11 +59,6 @@ function component(width, height, color, x, y){
 	this.y = y;
 	this.inside = isInside(mouseX, mouseY, this.x, this.y, this.width, this.height);
 	this.update = function(){
-		if(this.inside){
-			color = "green";
-		}else{
-			color = "blue";
-		}
 		ctx = gameScreen.context;
 		ctx.fillStyle = color;
 		ctx.fillRect(this.x, this.y, this.width, this.height);
@@ -59,8 +85,12 @@ function isInside(x, y, rectX, rectY, rectWidth, rectHeight){
 
 function updateGameArea(){
 	gameScreen.clear();
-	startButton.update();
+	if(gameStart){
+		player.update();
+	}else{
+		startButton.update();
+	}
 }
 	
 
-startGame();
+loadGame();
