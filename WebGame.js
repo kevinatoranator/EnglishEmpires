@@ -1,49 +1,89 @@
-console.log("Testing connection");
-
 var startButton;
 var mouseX, mouseY;
-var player;
-var gameStart = false;
+var questionTest, questionTest2;
+var currentQuestion = -1;
+var correctAnswers = 0;
+var questions = new Array(new Question("Pick a choice", [ "a", "b", "c", "d*", "e"], 3), new Question("Pick another choice", [ "a", "b", "e*", "f"], 2));
+var components = new Array();
 
 function loadGame(){
 	gameScreen.start();
-	startButton = new component(90, 30, "blue", 300, 120);
-	startButton.update = function(){
-		if(this.inside){
-			color = "green";
-		}else{
-			color = "blue";
-		}
-		ctx = gameScreen.context;
-		ctx.fillStyle = color;
-		ctx.fillRect(this.x, this.y, this.width, this.height);
-	}
-	gameScreen.canvas.addEventListener('mousemove', MouseMoveStart);
-	gameScreen.canvas.addEventListener('click', MouseClickStart);
+	startButton = new component(90, 30, "blue", 300, 120, "Start");
+	components.push(startButton);
+	gameScreen.canvas.addEventListener('mousemove', MouseMove);
+	gameScreen.canvas.addEventListener('click', MouseClick);
 }
 
-function MouseMoveStart(event){
+function startGame(){
+	currentQuestion = 0;
+	components.forEach(function(item, index){
+		if(item == startButton){
+			components.splice(index);
+		}
+	});
+	gameScreen.canvas.removeEventListener("mousemove", MouseMove);
+	nextQuestion(currentQuestion);
+}
+function nextQuestion(currentQuestion){
+	components = [];
+	components.push(questions[currentQuestion]);
+	questions[currentQuestion].answers.forEach(function(item, index){
+			answer = new component(90, 30, "red", 300, 120 + ((index + 1) * 40), item);
+			components.push(answer);
+	});
+}
+
+function Question(question, answers, correct){
+	this.question = question;
+	this.answers = answers;
+	this.correct = correct;
+	this.update = function(){
+		ctx = gameScreen.context;
+		ctx.font = "40px serif";
+		ctx.fillStyle = "black";
+		ctx.textAlign = "center";
+		ctx.fillText(this.question, ctx.canvas.width/2, 50);
+	}
+}
+
+function MouseMove(event){
 	const mousePos = getMousePos(gameScreen, event);
 	mouseX = mousePos.x;
 	mouseY = mousePos.y;
 	startButton.inside = isInside(mouseX, mouseY, startButton.x, startButton.y, startButton.width, startButton.height);
-	
+	if(startButton.inside){
+		startButton.color = "green";
+	}else{
+		startButton.color = "blue";
+	}
 }
-function MouseClickStart(event){
+function MouseClick(event){
 	const mousePos = getMousePos(gameScreen, event);
 		mouseX = mousePos.x;
 		mouseY = mousePos.y;
+		
 		if(isInside(mouseX, mouseY, startButton.x, startButton.y, startButton.width, startButton.height)){
 			startGame();
 		}
-}
-
-function startGame(){
-	gameStart = true;
-	gameScreen.canvas.removeEventListener("mousemove", MouseMoveStart);
-	gameScreen.canvas.removeEventListener("click", MouseClickStart);
-	startButton = {};
-	player = new component(10, 10, "red", 30, 30);
+		components.forEach(function(item){
+			if(isInside(mouseX, mouseY, item.x, item.y, item.width, item.height)){
+				console.log(item.text);
+				if(questions[currentQuestion].answers.indexOf(item.text) == questions[currentQuestion].correct){
+					correctAnswers++;
+				}
+				currentQuestion++;
+				if(currentQuestion < questions.length){
+					if(currentQuestion == -1){
+						startGame();
+					}else{
+						nextQuestion(currentQuestion);
+					}
+				}else{
+					console.log("Correct answers: " + correctAnswers);
+					components = [];
+				}
+			}
+		});
 }
 
 function getMousePos(canvas, event){
@@ -52,16 +92,22 @@ function getMousePos(canvas, event){
 	y: event.clientY - rect.top};
 }
 
-function component(width, height, color, x, y){
+function component(width, height, color, x, y, text){
 	this.width = width;
 	this.height = height;
+	this.color = color;
 	this.x = x;
 	this.y = y;
+	this.text = text;
 	this.inside = isInside(mouseX, mouseY, this.x, this.y, this.width, this.height);
 	this.update = function(){
 		ctx = gameScreen.context;
-		ctx.fillStyle = color;
+		ctx.fillStyle = this.color;
 		ctx.fillRect(this.x, this.y, this.width, this.height);
+		ctx.font = "20px serif";
+		ctx.fillStyle = "white";
+		ctx.textAlign = "center";
+		ctx.fillText(this.text, this.x + this.width/2, this.y + this.height*2/3);
 	}
 }
 
@@ -85,12 +131,9 @@ function isInside(x, y, rectX, rectY, rectWidth, rectHeight){
 
 function updateGameArea(){
 	gameScreen.clear();
-	if(gameStart){
-		player.update();
-	}else{
-		startButton.update();
-	}
+	components.forEach(function(item){
+			item.update();
+		});
 }
 	
-
 loadGame();
