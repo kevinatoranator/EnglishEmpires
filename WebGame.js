@@ -12,9 +12,11 @@ const Colors = ["red", "green", "blue", "purple", "orange"];
 const GameStates = {
 	Menu: 0,
 	Quiz: 1,
-	Results: 2
+	Results: 2,
+	FinalResults: 3
 };
 var currentState;
+var secondsRemaining;
 
 function loadGame(){
 	gameScreen.start();
@@ -42,6 +44,7 @@ function startGame(){
 function questionResults(currentQuestion, answers){
 	components = [];
 	texts = [];
+	currentState = GameStates.Results;
 	//text with results chosen answer + right answer
 	components.push(new component(90, 30, "red", 300, 120, "Next"));
 	texts.push(new textBox(`The answer was ${currentQuestion.answers[currentQuestion.correct]}!`, ctx.canvas.width/2, 50));
@@ -58,6 +61,8 @@ function questionResults(currentQuestion, answers){
 function nextQuestion(currentQuestion){
 	components = [];
 	texts = [];
+	secondsRemaining = 20;
+	currentState = GameStates.Quiz;
 	components.push(questions[currentQuestion]);
 	questions[currentQuestion].answers.forEach(function(item, index){
 			answer = new component(90, 30, Colors[index], 300, 120 + ((index + 1) * 40), item);
@@ -67,7 +72,7 @@ function nextQuestion(currentQuestion){
 
 function results(currentQuestion){
 	texts = [];
-	currentState = GameStates.Results;
+	currentState = GameStates.FinalResults;
 	var menuButton = new component(90, 30, "green", 300, 120, "Menu");
 	components.push(menuButton);
 }
@@ -120,6 +125,15 @@ function MouseClick(event){
 				if(isInside(mouseX, mouseY, item.x, item.y, item.width, item.height)){
 					console.log(item.text);
 					answers.push(item.text);
+					if(questions[currentQuestion].answers.indexOf(item.text) == questions[currentQuestion].correct){//Correct Answer
+						correctAnswers++;
+					}
+					questionResults(questions[currentQuestion], answers);
+				}
+			});
+		}else if(currentState == GameStates.Results){
+			components.forEach(function(item){
+				if(isInside(mouseX, mouseY, item.x, item.y, item.width, item.height)){
 					if(item.text == "Next"){
 						currentQuestion++;
 						if(currentQuestion < questions.length){
@@ -130,16 +144,10 @@ function MouseClick(event){
 							components = [];
 							results();
 						}
-					}else{
-						if(questions[currentQuestion].answers.indexOf(item.text) == questions[currentQuestion].correct){//Correct Answer
-							correctAnswers++;
-						}
-						questionResults(questions[currentQuestion], answers);
-					}
-					
+					}	
 				}
 			});
-		}else if(currentState == GameStates.Results){
+		}else if(currentState == GameStates.FinalResults){
 			components.forEach(function(item){
 				if(isInside(mouseX, mouseY, item.x, item.y, item.width, item.height)){
 					loadGame();
@@ -180,7 +188,11 @@ var gameScreen = {
 		this.canvas.height = 480;
 		this.context = this.canvas.getContext("2d");
 		document.body.insertBefore(this.canvas, document.body.childNodes[2]);
-		this.interval = setInterval(updateGameArea, 20);
+		this.startTime = Date.now();
+		this.lastUpdate = Date.now();
+		this.totalTimeElapsed = 0;
+		this.intervalUpdate = setInterval(Update, 20);
+		this.intervalDraw = setInterval(Draw, 20);
 	},
 	clear : function(){
 		this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
@@ -191,7 +203,7 @@ function isInside(x, y, rectX, rectY, rectWidth, rectHeight){
 	return x >= rectX && x <= rectX + rectWidth && y >= rectY && y <= rectY + rectHeight;
 }
 
-function updateGameArea(){
+function Draw(){
 	gameScreen.clear();
 	components.forEach(function(item){
 			item.update();
@@ -203,9 +215,25 @@ function updateGameArea(){
 			
 		});
 		
-		if(currentState == GameStates.Results){
+		if(currentState == GameStates.FinalResults){
 			new textBox(`You got ${correctAnswers} questions right!`, ctx.canvas.width/2, 50).update();
+		}else if(currentState == GameStates.Quiz){
+			new textBox(`${secondsRemaining}`, ctx.canvas.width/2, 100).update();
 		}
 }
+function Update(){
+	gameScreen.totalTimeElapsed = 0;//not done
+	if(currentState == GameStates.Quiz){
+		var timer = setInterval(Timer, 1000);
+		if(secondsRemaining < 0){
+			questionResults(questions[currentQuestion], answers);
+		}
+	}
+}
+	
+function Timer(){
+	
+	secondsRemaining--;
+}	
 	
 loadGame();
